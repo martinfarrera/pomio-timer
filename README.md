@@ -59,4 +59,6 @@ No se necesita un paso de compilación.
 3. Sube `index.html`, `styles/`, `src/`, `package.json` y este README conservando sus rutas.
 4. Visita el dominio HTTPS y ejecuta las comprobaciones anteriores.
 
+Antes de cada publicación, cambia el token `?v=` de `index.html` y de todas las importaciones locales en `src/`. Un único token por versión evita que el navegador mezcle HTML nuevo con JavaScript anterior almacenado en caché.
+
 El servidor web de producción debe entregar los archivos `.js` con un tipo MIME de JavaScript. Para revertir el despliegue, restaura el directorio estático anterior; Temporizador Pomio no tiene migraciones de servidor.

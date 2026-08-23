@@ -1,11 +1,11 @@
 import {
   MINUTE_MS, createTimer, reconcileTimer, transitionTimer,
-} from "./domain/timers.js";
-import { loadState, normalizeState, saveState } from "./storage.js";
+} from "./domain/timers.js?v=20260822.1";
+import { loadState, normalizeState, saveState } from "./storage.js?v=20260822.1";
 import {
   announce, configureTimerDialog, renderTimers, setTimerMode,
-} from "./ui.js";
-import { createAudioController } from "./audio.js";
+} from "./ui.js?v=20260822.1";
+import { createAudioController } from "./audio.js?v=20260822.1";
 
 export function hasRunningTimers(state) {
   return state.timers.some(({ runtime }) => runtime.status === "running");

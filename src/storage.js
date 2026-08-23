@@ -1,5 +1,5 @@
-import { createTimer, validateTimerInput } from "./domain/timers.js";
-import { normalizeAudioSettings } from "./audio.js";
+import { createTimer, validateTimerInput } from "./domain/timers.js?v=20260822.1";
+import { normalizeAudioSettings } from "./audio.js?v=20260822.1";
 
 export const STORAGE_VERSION = 1;
 export const STORAGE_KEY = "pomio-timer-state";
