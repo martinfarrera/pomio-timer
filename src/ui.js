@@ -1,6 +1,6 @@
 import {
   TIMER_COLORS, TIMER_COLOR_VALUES, getCurrentPhaseDisplay,
-} from "./domain/timers.js?v=20260822.3";
+} from "./domain/timers.js?v=20260822.4";
 
 const COLOR_LABELS = Object.freeze({
   coral: "coral",
@@ -75,7 +75,8 @@ export function createTimerCard(timer, now = Date.now()) {
   face.setAttribute("aria-label", `${display.minutes} minutos y ${display.seconds} segundos`);
 
   const time = element("div", "time-display");
-  if (timer.emoji) time.append(element("span", "timer-emoji", timer.emoji));
+  const content = element("div", "time-content");
+  if (timer.emoji) content.append(element("span", "timer-emoji", timer.emoji));
   const values = element("div", "time-values");
   values.append(
     element("span", "time-minutes", display.minutes),
@@ -83,16 +84,17 @@ export function createTimerCard(timer, now = Date.now()) {
     element("span", "time-seconds", display.seconds),
   );
   const title = element("h3", "timer-title", timer.name);
-  time.append(values, title);
+  content.append(values, title);
   if (timer.kind === "pomodoro") {
-    time.append(element(
+    content.append(element(
       "span",
       "cycle-label",
-      `Pomodoro · ${timer.runtime.cycleIndex + 1}/${timer.config.hours}`,
+      `${timer.runtime.cycleIndex + 1}/${timer.config.hours}`,
     ));
   } else {
-    time.append(element("span", "cycle-label", "Timer"));
+    content.append(element("span", "cycle-label", "Timer"));
   }
+  time.append(content);
   face.append(time);
 
   const controls = element("div", "timer-actions");
