@@ -1,6 +1,6 @@
 import {
   TIMER_COLORS, TIMER_COLOR_VALUES, getCurrentPhaseDisplay,
-} from "./domain/timers.js?v=20260822.5";
+} from "./domain/timers.js?v=20260822.6";
 
 const COLOR_LABELS = Object.freeze({
   coral: "coral",

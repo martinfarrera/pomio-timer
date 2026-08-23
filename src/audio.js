@@ -2,7 +2,7 @@ const DEFAULTS = Object.freeze({
   noise: "off", noiseVolume: 0.35, alertVolume: 0.7,
   repeatUntilContinue: false,
 });
-const NOISES = new Set(["off", "rain", "static", "ocean", "fan", "gamma"]);
+const NOISES = new Set(["off", "rain", "static", "ocean", "tickSlow", "tickFast"]);
 
 export function normalizeAudioSettings(value = {}) {
   const candidate = value && typeof value === "object" ? value : {};
@@ -39,9 +39,6 @@ function bufferedNoiseSource(context, kind, volume, random) {
     } else if (kind === "ocean") {
       const wave = 0.2 + 0.8 * ((Math.sin(index / context.sampleRate * Math.PI) + 1) / 2);
       samples[index] = raw * wave;
-    } else if (kind === "fan") {
-      previous = previous * 0.94 + raw * 0.06;
-      samples[index] = previous;
     } else samples[index] = raw;
   }
   const source = context.createBufferSource();
@@ -52,8 +49,7 @@ function bufferedNoiseSource(context, kind, volume, random) {
   filter.type = kind === "static" ? "highpass" : "lowpass";
   filter.frequency.value = kind === "static" ? 1_000
     : kind === "rain" ? 1_600
-      : kind === "fan" ? 260
-        : 420;
+      : 420;
   gain.gain.value = volume;
   source.connect(filter);
   filter.connect(gain);
@@ -62,11 +58,24 @@ function bufferedNoiseSource(context, kind, volume, random) {
   return { source, gain };
 }
 
-function gammaSource(context, volume) {
-  const source = context.createOscillator();
+function tickTockSource(context, kind, volume) {
+  const intervalSeconds = kind === "tickSlow" ? 0.9 : 0.35;
+  const length = Math.max(1, Math.round(context.sampleRate * intervalSeconds * 2));
+  const buffer = context.createBuffer(1, length, context.sampleRate);
+  const samples = buffer.getChannelData(0);
+  const burstLength = Math.max(1, Math.floor(context.sampleRate * 0.055));
+  for (const [time, frequency] of [[0, 1_000], [intervalSeconds, 720]]) {
+    const start = Math.round(time * context.sampleRate);
+    for (let offset = 0; offset < burstLength && start + offset < length; offset += 1) {
+      const elapsed = offset / context.sampleRate;
+      const envelope = Math.exp(-elapsed * 70);
+      samples[start + offset] += Math.sin(2 * Math.PI * frequency * elapsed) * envelope * 0.7;
+    }
+  }
+  const source = context.createBufferSource();
   const gain = context.createGain();
-  source.type = "sine";
-  source.frequency.value = 40;
+  source.buffer = buffer;
+  source.loop = true;
   gain.gain.value = volume;
   source.connect(gain);
   gain.connect(context.destination);
@@ -75,8 +84,8 @@ function gammaSource(context, volume) {
 }
 
 function backgroundSource(context, kind, volume, random) {
-  return kind === "gamma"
-    ? gammaSource(context, volume)
+  return kind === "tickSlow" || kind === "tickFast"
+    ? tickTockSource(context, kind, volume)
     : bufferedNoiseSource(context, kind, volume, random);
 }
 

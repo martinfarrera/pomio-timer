@@ -13,7 +13,7 @@ Los Pomodoros aceptan horas completas. Cada hora contiene una fase de enfoque y 
 
 ## Sonidos
 
-Abre **Sonidos** para elegir lluvia intensa, ruido blanco, olas del mar, ventilador, una onda gamma de 40 Hz o silencio. También puedes ajustar por separado el volumen de fondo y el de las alertas. Todo el audio se genera con Web Audio; no se descargan archivos de sonido.
+Abre **Sonidos** para elegir lluvia intensa, ruido blanco, olas del mar, tik-tak lento, tik-tak rápido o silencio. También puedes ajustar por separado el volumen de fondo y el de las alertas. Todo el audio se genera con Web Audio; no se descargan archivos de sonido.
 
 El sonido de fondo se reproduce únicamente mientras haya al menos un temporizador en ejecución. Los navegadores exigen una interacción del usuario antes de iniciar audio. Si **Repetir hasta continuar** está activado, el cambio de fase espera mientras se repite la alerta. Pulsa **Continuar** para detenerla e iniciar la fase preparada. Los temporizadores y controles visuales siguen funcionando si el audio no está disponible o está suspendido.
 

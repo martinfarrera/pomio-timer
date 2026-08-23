@@ -66,8 +66,8 @@ test("compact header and rounded-square side-by-side dial are encoded in CSS", (
   assert.match(css, /data-phase="rest"/);
 });
 
-test("fan and 40 Hz gamma wave are available without claims", () => {
-  assert.match(html, /<option value="fan">Ventilador<\/option>/);
-  assert.match(html, /<option value="gamma">Onda gamma \(40 Hz\)<\/option>/);
-  assert.doesNotMatch(html, /cura|salud|terapia|concentración|beneficio/i);
+test("slow and fast tick-tock replace retired background sounds", () => {
+  assert.match(html, /<option value="tickSlow">Tik-tak lento<\/option>/);
+  assert.match(html, /<option value="tickFast">Tik-tak rápido<\/option>/);
+  assert.doesNotMatch(html, /Ventilador|Onda gamma|value="(?:fan|gamma)"/i);
 });

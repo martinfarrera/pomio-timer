@@ -8,6 +8,9 @@ function fakeContext() {
     bufferStarts: 0,
     oscillatorStarts: 0,
     oscillatorFrequencies: [],
+    buffers: [],
+    bufferSources: [],
+    gains: [],
     stops: 0,
   };
   const param = () => ({
@@ -21,15 +24,24 @@ function fakeContext() {
     stop() { stats.stops += 1; },
   });
   const context = {
-    state: "suspended", sampleRate: 8, currentTime: 0, destination: {}, stats,
+    state: "suspended", sampleRate: 8_000, currentTime: 0, destination: {}, stats,
     async resume() { stats.resumes += 1; this.state = "running"; },
     createBuffer(_channels, length) {
       const data = new Float32Array(length);
+      stats.buffers.push(data);
       return { getChannelData() { return data; } };
     },
-    createBufferSource() { return { ...node(), loop: false, buffer: null }; },
+    createBufferSource() {
+      const source = { ...node(), loop: false, buffer: null };
+      stats.bufferSources.push(source);
+      return source;
+    },
     createBiquadFilter() { return { ...node(), type: "", frequency: param() }; },
-    createGain() { return { ...node(), gain: param() }; },
+    createGain() {
+      const gain = { ...node(), gain: param() };
+      stats.gains.push(gain);
+      return gain;
+    },
     createOscillator() {
       const oscillator = { ...node(), type: "", frequency: param() };
       oscillator.start = () => {
@@ -43,16 +55,19 @@ function fakeContext() {
 }
 
 test("audio settings normalize all procedural backgrounds and volumes", () => {
-  for (const noise of ["rain", "static", "ocean", "fan", "gamma"]) {
+  for (const noise of ["rain", "static", "ocean", "tickSlow", "tickFast"]) {
     assert.equal(normalizeAudioSettings({ noise }).noise, noise);
   }
   assert.deepEqual(normalizeAudioSettings({
-    noise: "gamma", noiseVolume: 0.4, alertVolume: 0.9,
+    noise: "tickFast", noiseVolume: 0.4, alertVolume: 0.9,
     repeatUntilContinue: true,
   }), {
-    noise: "gamma", noiseVolume: 0.4, alertVolume: 0.9,
+    noise: "tickFast", noiseVolume: 0.4, alertVolume: 0.9,
     repeatUntilContinue: true,
   });
+  for (const retired of ["fan", "gamma"]) {
+    assert.equal(normalizeAudioSettings({ noise: retired }).noise, "off");
+  }
   assert.deepEqual(normalizeAudioSettings({ noise: "bad", noiseVolume: 9 }), {
     noise: "off", noiseVolume: 0.35, alertVolume: 0.7,
     repeatUntilContinue: false,
@@ -76,14 +91,40 @@ test("background sound runs if and only if at least one timer is active", async 
   assert.equal(audio.getStatus().playing, false);
 
   audio.setActive(true);
-  audio.setSettings({ noise: "fan" });
+  audio.setSettings({ noise: "tickSlow" });
   assert.equal(context.stats.bufferStarts, 3);
-  audio.setSettings({ noise: "gamma" });
-  assert.equal(context.stats.oscillatorStarts, 1);
-  assert.equal(context.stats.oscillatorFrequencies.at(-1), 40);
-  assert.equal(audio.getStatus().noise, "gamma");
+  audio.setSettings({ noise: "tickFast" });
+  assert.equal(context.stats.bufferStarts, 4);
+  assert.equal(audio.getStatus().noise, "tickFast");
   audio.setActive(false);
   assert.equal(audio.getStatus().playing, false);
+});
+
+test("slow and fast tick-tock have distinct rhythms and a live master gain", async () => {
+  const slowContext = fakeContext();
+  const slow = createAudioController({ createContext: () => slowContext });
+  slow.setSettings({ noise: "tickSlow", noiseVolume: 0.3 });
+  slow.setActive(true);
+  await slow.unlock();
+
+  const fastContext = fakeContext();
+  const fast = createAudioController({ createContext: () => fastContext });
+  fast.setSettings({ noise: "tickFast", noiseVolume: 0.3 });
+  fast.setActive(true);
+  await fast.unlock();
+
+  const slowSamples = slowContext.stats.buffers.at(-1);
+  const fastSamples = fastContext.stats.buffers.at(-1);
+  assert.ok(slowSamples.some((sample) => sample !== 0));
+  assert.ok(fastSamples.some((sample) => sample !== 0));
+  assert.ok(slowSamples.length > fastSamples.length * 2.5);
+  assert.equal(slowContext.stats.bufferSources.at(-1).loop, true);
+  assert.equal(fastContext.stats.bufferSources.at(-1).loop, true);
+
+  const master = fastContext.stats.gains.at(-1);
+  fast.setSettings({ noiseVolume: 0.8 });
+  assert.equal(master.gain.value, 0.8);
+  assert.equal(fastContext.stats.bufferStarts, 1, "volume changes must not restart tick-tock");
 });
 
 test("a pending unlock cannot restart sound after the last timer pauses", async () => {

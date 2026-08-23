@@ -95,13 +95,27 @@ test("version 1 timers gain dialColor from their legacy card color", () => {
     version: 1,
     sections: [{ id: "inbox", name: "Timers" }, { id: "work", name: "Work" }],
     timers: [legacy],
-    audio: { noise: "fan", noiseVolume: 0.45, alertVolume: 0.6 },
+    audio: { noise: "tickSlow", noiseVolume: 0.45, alertVolume: 0.6 },
   });
   assert.equal(normalized.version, 1);
   assert.equal(normalized.timers[0].color, "rose");
   assert.equal(normalized.timers[0].dialColor, "rose");
   assert.equal(normalized.timers[0].sectionId, "work");
-  assert.equal(normalized.audio.noise, "fan");
+  assert.equal(normalized.audio.noise, "tickSlow");
+});
+
+test("retired fan and gamma settings safely degrade to off", () => {
+  for (const noise of ["fan", "gamma"]) {
+    const normalized = normalizeState({
+      version: 1,
+      sections: [{ id: "inbox", name: "Timers" }],
+      timers: [],
+      audio: { noise, noiseVolume: 0.45, alertVolume: 0.6 },
+    });
+    assert.equal(normalized.audio.noise, "off");
+    assert.equal(normalized.audio.noiseVolume, 0.45);
+    assert.equal(normalized.audio.alertVolume, 0.6);
+  }
 });
 
 test("corrupt, unsupported, unavailable, and missing storage recover to defaults", () => {
