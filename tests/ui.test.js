@@ -11,10 +11,16 @@ const [html, css, ui] = await Promise.all([
 test("the visible shell is Spanish and removes section and bulk controls", () => {
   assert.match(html, /<html lang="es">/);
   assert.match(html, /<title>Temporizador Pomio<\/title>/);
+  assert.match(html, /<link rel="icon" type="image\/png" href="assets\/favicon\.png\?v=[^"]+">/);
+  assert.doesNotMatch(html, /<img\b[^>]*favicon/i);
   assert.match(html, /Crear temporizador/);
   assert.match(html, /Sonidos/);
   assert.doesNotMatch(html, /My timers|Start all|section-dialog|create-menu/i);
   assert.doesNotMatch(ui, /Settings for|Create a timer|minutes .* seconds/i);
+});
+
+test("normal timers use the cycle slot for the Timer label", () => {
+  assert.match(ui, /else \{\s*time\.append\(element\("span", "cycle-label", "Timer"\)\);/);
 });
 
 test("every dialog close and cancel path bypasses required-field validation", () => {

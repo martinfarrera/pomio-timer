@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 
 const ROOT = new URL("../", import.meta.url);
-const VERSIONED_ASSET = /\.(?:css|js)\?v=([a-zA-Z0-9._-]+)$/;
+const VERSIONED_ASSET = /\.(?:css|js|png)\?v=([a-zA-Z0-9._-]+)$/;
 
 async function sourceFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -18,7 +18,7 @@ async function sourceFiles(directory) {
 test("browser assets share one release token across the complete ESM graph", async () => {
   const html = await readFile(new URL("index.html", ROOT), "utf8");
   const references = [...html.matchAll(
-    /(?:href|src)="([^"?#]+\.(?:css|js)(?:\?[^"#]*)?)"/g,
+    /(?:href|src)="([^"?#]+\.(?:css|js|png)(?:\?[^"#]*)?)"/g,
   )].map(([, reference]) => ({ source: "index.html", reference }));
 
   for (const file of await sourceFiles(new URL("src/", ROOT))) {
@@ -36,4 +36,9 @@ test("browser assets share one release token across the complete ESM graph", asy
     tokens.add(match[1]);
   }
   assert.equal(tokens.size, 1, `browser assets use different release tokens: ${[...tokens]}`);
+});
+
+test("the browser icon is a valid PNG asset", async () => {
+  const favicon = await readFile(new URL("assets/favicon.png", ROOT));
+  assert.deepEqual([...favicon.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 });

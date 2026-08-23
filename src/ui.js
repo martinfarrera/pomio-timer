@@ -1,6 +1,6 @@
 import {
   TIMER_COLORS, TIMER_COLOR_VALUES, getCurrentPhaseDisplay,
-} from "./domain/timers.js?v=20260822.1";
+} from "./domain/timers.js?v=20260822.2";
 
 const COLOR_LABELS = Object.freeze({
   coral: "coral",
@@ -91,6 +91,8 @@ export function createTimerCard(timer, now = Date.now()) {
       "cycle-label",
       `${timer.runtime.cycleIndex + 1}/${timer.config.hours}`,
     ));
+  } else {
+    time.append(element("span", "cycle-label", "Timer"));
   }
   face.append(time);
 

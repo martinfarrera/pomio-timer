@@ -56,7 +56,7 @@ No se necesita un paso de compilación.
 
 1. Abre el administrador de archivos de Hostinger para el dominio.
 2. Abre `public_html` y elimina o archiva el sitio anterior solo si deseas reemplazarlo.
-3. Sube `index.html`, `styles/`, `src/`, `package.json` y este README conservando sus rutas.
+3. Sube `index.html`, `assets/`, `styles/`, `src/`, `package.json` y este README conservando sus rutas.
 4. Visita el dominio HTTPS y ejecuta las comprobaciones anteriores.
 
 Antes de cada publicación, cambia el token `?v=` de `index.html` y de todas las importaciones locales en `src/`. Un único token por versión evita que el navegador mezcle HTML nuevo con JavaScript anterior almacenado en caché.
