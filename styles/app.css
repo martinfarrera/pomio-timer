@@ -77,19 +77,19 @@ main { width: 100%; max-width: 1100px; margin: auto; }
 }
 .time-display {
   display: grid; place-content: center; width: 100%; height: 100%; min-width: 0;
-  padding: 5px; border-radius: 24%; background: var(--surface);
+  padding: 4px 5px 1px; border-radius: 24%; background: var(--surface);
   font-variant-numeric: tabular-nums;
 }
+.timer-emoji { margin-bottom: 2px; font-size: .9rem; line-height: 1; }
 .time-values { display: flex; align-items: baseline; justify-content: center; line-height: .9; }
 .time-minutes { font-size: clamp(1.485rem, 19.8vw, 2.205rem); }
 .time-separator { margin-inline: 2px; font-size: clamp(1rem, 13vw, 1.4rem); color: #ffffffb8; }
 .time-seconds { font-size: clamp(.84rem, 11.2vw, 1.16rem); color: #ffffffd9; }
 .timer-title {
-  max-width: 100%; margin: 7px 0 0; overflow: hidden;
+  max-width: 100%; margin: 4px 0 0; overflow: hidden;
   font-size: .72rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap;
 }
-.timer-emoji { margin-right: 3px; }
-.cycle-label { margin-top: 3px; color: #ffffffa6; font-size: .56rem; }
+.cycle-label { margin-top: 2px; color: #ffffffa6; font-size: .56rem; }
 .timer-actions { display: flex; justify-content: center; gap: 7px; }
 .icon-button {
   display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0;

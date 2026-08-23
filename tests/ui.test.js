@@ -19,8 +19,16 @@ test("the visible shell is Spanish and removes section and bulk controls", () =>
   assert.doesNotMatch(ui, /Settings for|Create a timer|minutes .* seconds/i);
 });
 
-test("normal timers use the cycle slot for the Timer label", () => {
+test("timer kind labels distinguish normal timers from Pomodoros", () => {
+  assert.match(ui, /`Pomodoro · \$\{timer\.runtime\.cycleIndex \+ 1\}\/\$\{timer\.config\.hours\}`/);
   assert.match(ui, /else \{\s*time\.append\(element\("span", "cycle-label", "Timer"\)\);/);
+});
+
+test("the emoji sits above the time and the dial uses less bottom padding", () => {
+  assert.match(ui, /if \(timer\.emoji\) time\.append\(element\("span", "timer-emoji", timer\.emoji\)\);\s*const values/);
+  assert.doesNotMatch(ui, /title\.append\(element\("span", "timer-emoji"/);
+  assert.match(css, /\.time-display \{[\s\S]*padding: 4px 5px 1px;/);
+  assert.match(css, /\.timer-emoji \{ margin-bottom: 2px;/);
 });
 
 test("every dialog close and cancel path bypasses required-field validation", () => {
