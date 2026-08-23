@@ -25,11 +25,11 @@ test("timer kind labels distinguish normal timers from Pomodoros", () => {
   assert.match(ui, /else \{\s*content\.append\(element\("span", "cycle-label", "Timer"\)\);/);
 });
 
-test("the emoji and dial content use the requested vertical spacing", () => {
+test("the emoji and dial content use balanced vertical spacing", () => {
   assert.match(ui, /const content = element\("div", "time-content"\);\s*if \(timer\.emoji\) content\.append\(element\("span", "timer-emoji", timer\.emoji\)\);/);
   assert.doesNotMatch(ui, /title\.append\(element\("span", "timer-emoji"/);
-  assert.match(css, /\.time-display \{[\s\S]*padding: 4px 5px 1px;/);
-  assert.match(css, /\.time-content \{[\s\S]*transform: translateY\(10px\);/);
+  assert.match(css, /\.time-display \{[\s\S]*place-items: center;[\s\S]*padding: 4px 5px;/);
+  assert.doesNotMatch(css, /\.time-content \{[^}]*transform:/);
   assert.match(css, /\.timer-emoji \{ padding-bottom: 5px;/);
   assert.doesNotMatch(css, /\.timer-emoji \{[^}]*margin-bottom/);
 });
