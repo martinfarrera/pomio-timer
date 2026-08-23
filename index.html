@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#171716">
+    <title>Pomio Timer</title>
+    <link rel="stylesheet" href="styles/app.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to timers</a>
+    <header class="app-header" aria-label="Timer tools">
+      <button class="header-button" type="button" data-action="toggle-create"
+        aria-controls="create-menu" aria-expanded="false">＋ Timer</button>
+      <div class="create-menu" id="create-menu" hidden>
+        <button type="button" data-action="create-normal">Normal timer</button>
+        <button type="button" data-action="create-pomodoro">Pomodoro timer</button>
+      </div>
+      <button class="header-button" type="button" data-action="open-sounds">♫ Sounds</button>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <div class="library-heading">
+        <h1>My timers</h1>
+        <button class="start-all secondary" type="button" data-action="new-section">＋ Section</button>
+        <button class="start-all" type="button" data-action="start-all">Start all</button>
+      </div>
+      <div id="sections" aria-live="polite">
+        <p class="empty-state">Create a timer to begin your routine.</p>
+      </div>
+    </main>
+
+    <dialog id="timer-dialog" aria-labelledby="timer-dialog-title">
+      <form id="timer-form" method="dialog">
+        <div class="dialog-heading">
+          <h2 id="timer-dialog-title">Create timer</h2>
+          <button class="icon-button" value="cancel" aria-label="Close">×</button>
+        </div>
+        <input type="hidden" name="kind" value="normal">
+        <label>Name <input name="name" maxlength="50" required></label>
+        <label>Emoji <input name="emoji" maxlength="8" inputmode="text"></label>
+        <label>Section <select name="sectionId"></select></label>
+        <div data-fields="normal">
+          <label>Hours <input name="hours" type="number" min="0" value="0"></label>
+          <label>Minutes <input name="minutes" type="number" min="0" max="59" value="25"></label>
+        </div>
+        <div data-fields="pomodoro" hidden>
+          <label>Whole hours <input name="pomodoroHours" type="number" min="1" step="1" value="1"></label>
+          <label>Rest per hour
+            <select name="restMinutes">
+              <option>5</option><option>10</option><option selected>15</option><option>20</option>
+            </select>
+          </label>
+          <label class="check"><input name="autoAdvance" type="checkbox" checked> Continue automatically</label>
+        </div>
+        <label>Color <select name="color" id="color-options"></select></label>
+        <menu>
+          <button class="danger" type="button" data-action="delete-timer" hidden>Delete</button>
+          <button value="cancel">Cancel</button>
+          <button class="primary" value="save">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="section-dialog" aria-labelledby="section-dialog-title">
+      <form id="section-form" method="dialog">
+        <div class="dialog-heading">
+          <h2 id="section-dialog-title">Create section</h2>
+          <button class="icon-button" value="cancel" aria-label="Close">×</button>
+        </div>
+        <label>Name <input name="name" maxlength="40" required></label>
+        <menu>
+          <button class="danger" type="button" data-action="delete-section" hidden>Delete</button>
+          <button value="cancel">Cancel</button>
+          <button class="primary" value="save">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="sounds-dialog" aria-labelledby="sounds-title">
+      <form id="sounds-form" method="dialog">
+        <div class="dialog-heading">
+          <h2 id="sounds-title">Sounds</h2>
+          <button class="icon-button" value="cancel" aria-label="Close">×</button>
+        </div>
+        <label>Background sound
+          <select name="noise"><option value="off">Off</option><option value="rain">Heavy rain</option><option value="static">TV static</option><option value="ocean">Ocean waves</option></select>
+        </label>
+        <label>Background volume <input name="noiseVolume" type="range" min="0" max="1" step="0.05"></label>
+        <label>Alert volume <input name="alertVolume" type="range" min="0" max="1" step="0.05"></label>
+        <label class="check"><input name="repeatUntilContinue" type="checkbox"> Ring until Continue</label>
+        <menu><button value="cancel">Cancel</button><button class="primary" value="save">Save</button></menu>
+      </form>
+    </dialog>
+    <div class="sr-only" id="announcer" aria-live="assertive"></div>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
