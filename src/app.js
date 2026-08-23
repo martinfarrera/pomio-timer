@@ -1,14 +1,18 @@
 import {
-  MINUTE_MS, createTimer, reconcileTimer, startAll, transitionTimer,
+  MINUTE_MS, createTimer, reconcileTimer, transitionTimer,
 } from "./domain/timers.js";
 import { loadState, normalizeState, saveState } from "./storage.js";
-import { announce, configureTimerDialog, renderSections } from "./ui.js";
+import {
+  announce, configureTimerDialog, renderTimers, setTimerMode,
+} from "./ui.js";
 import { createAudioController } from "./audio.js";
 
-function cleanName(value, label) {
-  const name = typeof value === "string" ? value.trim() : "";
-  if (!name) throw new RangeError(`${label} name is required`);
-  return name;
+export function hasRunningTimers(state) {
+  return state.timers.some(({ runtime }) => runtime.status === "running");
+}
+
+export function syncAudioActivity(audio, state) {
+  audio.setActive(hasRunningTimers(state));
 }
 
 export function reduceApp(state, action, now = Date.now()) {
@@ -34,41 +38,10 @@ export function reduceApp(state, action, now = Date.now()) {
         : timer),
     };
   }
-  if (action.type === "timer/start-all") {
-    return { ...state, timers: startAll(state.timers, now) };
-  }
-  if (action.type === "section/create") {
-    const id = cleanName(action.id, "Section");
-    if (state.sections.some((section) => section.id === id)) {
-      throw new RangeError("Section already exists");
-    }
-    return {
-      ...state,
-      sections: [...state.sections, { id, name: cleanName(action.name, "Section") }],
-    };
-  }
-  if (action.type === "section/update") {
-    return {
-      ...state,
-      sections: state.sections.map((section) => section.id === action.id
-        ? { ...section, name: cleanName(action.name, "Section") }
-        : section),
-    };
-  }
-  if (action.type === "section/delete") {
-    if (action.id === "inbox") throw new RangeError("The default section cannot be deleted");
-    return {
-      ...state,
-      sections: state.sections.filter(({ id }) => id !== action.id),
-      timers: state.timers.map((timer) => timer.sectionId === action.id
-        ? { ...timer, sectionId: "inbox" }
-        : timer),
-    };
-  }
   if (action.type === "audio/update") {
     return normalizeState({ ...state, audio: { ...state.audio, ...action.audio } });
   }
-  throw new RangeError(`Unknown application action: ${action.type}`);
+  throw new RangeError(`Acción desconocida de la aplicación: ${action.type}`);
 }
 
 export function reconcileAppState(state, now = Date.now()) {
@@ -83,14 +56,9 @@ export function reconcileAppState(state, now = Date.now()) {
   return { state: transitions.length ? { ...state, timers } : state, transitions };
 }
 
-function makeSectionId(state, name) {
-  const base = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "section";
-  let id = base;
-  for (let index = 2; state.sections.some((section) => section.id === id); index += 1) {
-    id = `${base}-${index}`;
-  }
-  return id;
+function transitionAnnouncement(transition) {
+  if (transition.status === "completed") return "Temporizador completado";
+  return transition.phase === "rest" ? "Descanso iniciado" : "Enfoque iniciado";
 }
 
 export function bootstrap(
@@ -98,35 +66,25 @@ export function bootstrap(
   storage = globalThis.localStorage,
   audio = createAudioController(),
 ) {
-  const sectionsRoot = doc.querySelector("#sections");
+  const timersRoot = doc.querySelector("#timers");
   const timerDialog = doc.querySelector("#timer-dialog");
-  const sectionDialog = doc.querySelector("#section-dialog");
   const soundsDialog = doc.querySelector("#sounds-dialog");
   let state = loadState(storage);
   let editingTimerId = null;
-  let editingSectionId = null;
   audio.setSettings(state.audio);
+  syncAudioActivity(audio, state);
 
-  const render = (now = Date.now()) => renderSections(state, sectionsRoot, now);
+  const render = (now = Date.now()) => renderTimers(state, timersRoot, now);
   const commit = (next, message) => {
     state = normalizeState(next);
     saveState(state, storage);
+    syncAudioActivity(audio, state);
     render();
     if (message) announce(message, doc.querySelector("#announcer"));
   };
-  const openTimer = (kind, timer = null) => {
+  const openTimer = (timer = null) => {
     editingTimerId = timer?.id ?? null;
-    configureTimerDialog(timerDialog, { kind, timer, sections: state.sections });
-  };
-  const openSection = (section = null) => {
-    editingSectionId = section?.id ?? null;
-    const form = sectionDialog.querySelector("form");
-    form.reset();
-    form.elements.name.value = section?.name ?? "";
-    form.querySelector('[data-action="delete-section"]').hidden = !section || section.id === "inbox";
-    sectionDialog.querySelector("h2").textContent = section ? "Section settings" : "Create section";
-    sectionDialog.showModal();
-    form.elements.name.focus();
+    configureTimerDialog(timerDialog, { timer });
   };
 
   doc.addEventListener("click", (event) => {
@@ -135,43 +93,47 @@ export function bootstrap(
     if (!target) return;
     const action = target.dataset.action;
     try {
-      if (action === "toggle-create") {
-        const menu = doc.querySelector("#create-menu");
-        menu.hidden = !menu.hidden;
-        target.setAttribute("aria-expanded", String(!menu.hidden));
-      } else if (action === "create-normal" || action === "create-pomodoro") {
-        doc.querySelector("#create-menu").hidden = true;
-        openTimer(action === "create-normal" ? "normal" : "pomodoro");
+      if (action === "create-timer") {
+        openTimer();
       } else if (action === "open-sounds") {
         const form = soundsDialog.querySelector("form");
         for (const [key, value] of Object.entries(state.audio)) {
-          if (form.elements[key]) form.elements[key][typeof value === "boolean" ? "checked" : "value"] = value;
+          if (form.elements[key]) {
+            form.elements[key][typeof value === "boolean" ? "checked" : "value"] = value;
+          }
         }
         soundsDialog.showModal();
-      } else if (action === "new-section") openSection();
-      else if (action === "section-settings") {
-        openSection(state.sections.find(({ id }) => id === target.dataset.timerId));
+      } else if (action === "close-dialog") {
+        target.closest("dialog")?.close();
       } else if (action === "settings") {
         const timer = state.timers.find(({ id }) => id === target.dataset.timerId);
-        openTimer(timer.kind, timer);
+        if (timer) openTimer(timer);
       } else if (["start", "pause", "reset", "continue"].includes(action)) {
         if (action === "continue" || action === "reset") audio.stopAlert();
         commit(reduceApp(state, {
           type: "timer/control", id: target.dataset.timerId, command: action,
-        }), `${action} applied`);
+        }), {
+          start: "Temporizador iniciado",
+          pause: "Temporizador pausado",
+          reset: "Temporizador reiniciado",
+          continue: "Temporizador reanudado",
+        }[action]);
         if (action === "start") audio.playPhaseBell({ repeat: false });
-      } else if (action === "start-all") {
-        commit(reduceApp(state, { type: "timer/start-all" }), "All idle timers started");
       } else if (action === "delete-timer") {
-        commit(reduceApp(state, { type: "timer/delete", id: editingTimerId }), "Timer deleted");
+        audio.stopAlert();
+        commit(
+          reduceApp(state, { type: "timer/delete", id: editingTimerId }),
+          "Temporizador eliminado",
+        );
         timerDialog.close();
-      } else if (action === "delete-section") {
-        commit(reduceApp(state, { type: "section/delete", id: editingSectionId }), "Section deleted");
-        sectionDialog.close();
       }
     } catch (error) {
       announce(error.message, doc.querySelector("#announcer"));
     }
+  });
+
+  doc.querySelector("#timer-form").addEventListener("change", (event) => {
+    if (event.target.name === "kind") setTimerMode(event.currentTarget, event.target.value);
   });
 
   doc.querySelector("#timer-form").addEventListener("submit", (event) => {
@@ -179,12 +141,16 @@ export function bootstrap(
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
     const timer = {
-      name: data.name, emoji: data.emoji, color: data.color,
-      sectionId: data.sectionId, kind: data.kind,
+      name: data.name,
+      emoji: data.emoji,
+      color: data.color,
+      dialColor: data.dialColor,
+      kind: data.kind,
       config: data.kind === "normal"
         ? { durationMs: (Number(data.hours) * 60 + Number(data.minutes)) * MINUTE_MS }
         : {
-            hours: Number(data.pomodoroHours), restMinutes: Number(data.restMinutes),
+            hours: Number(data.pomodoroHours),
+            restMinutes: Number(data.restMinutes),
             autoAdvance: event.currentTarget.elements.autoAdvance.checked,
           },
     };
@@ -192,20 +158,14 @@ export function bootstrap(
       const action = editingTimerId
         ? { type: "timer/update", id: editingTimerId, changes: timer }
         : { type: "timer/create", timer };
-      commit(reduceApp(state, action), editingTimerId ? "Timer updated" : "Timer created");
+      commit(
+        reduceApp(state, action),
+        editingTimerId ? "Temporizador actualizado" : "Temporizador creado",
+      );
       timerDialog.close();
-    } catch (error) { announce(error.message, doc.querySelector("#announcer")); }
-  });
-
-  doc.querySelector("#section-form").addEventListener("submit", (event) => {
-    if (event.submitter?.value !== "save") return;
-    event.preventDefault();
-    const name = event.currentTarget.elements.name.value;
-    const action = editingSectionId
-      ? { type: "section/update", id: editingSectionId, name }
-      : { type: "section/create", id: makeSectionId(state, name), name };
-    try { commit(reduceApp(state, action), "Section saved"); sectionDialog.close(); }
-    catch (error) { announce(error.message, doc.querySelector("#announcer")); }
+    } catch (error) {
+      announce(error.message, doc.querySelector("#announcer"));
+    }
   });
 
   doc.querySelector("#sounds-form").addEventListener("submit", (event) => {
@@ -217,7 +177,7 @@ export function bootstrap(
       noiseVolume: Number(form.elements.noiseVolume.value),
       alertVolume: Number(form.elements.alertVolume.value),
       repeatUntilContinue: form.elements.repeatUntilContinue.checked,
-    } }), "Sound settings saved");
+    } }), "Configuración de sonido guardada");
     audio.setSettings(state.audio);
     soundsDialog.close();
   });
@@ -228,11 +188,12 @@ export function bootstrap(
     if (result.transitions.length) {
       state = result.state;
       saveState(state, storage);
+      syncAudioActivity(audio, state);
       const last = result.transitions.at(-1);
       audio.playPhaseBell({
         repeat: state.audio.repeatUntilContinue && last.status !== "completed",
       });
-      announce(last.status === "completed" ? "Timer completed" : `${last.phase} started`, doc.querySelector("#announcer"));
+      announce(transitionAnnouncement(last), doc.querySelector("#announcer"));
     }
     render(now);
   };

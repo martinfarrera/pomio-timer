@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   MINUTE_MS, REST_MINUTES, createTimer, getCurrentPhaseDisplay,
-  getPomodoroDurations, reconcileTimer, startAll, transitionTimer,
+  getPomodoroDurations, reconcileTimer, transitionTimer,
   validateTimerInput,
 } from "../src/domain/timers.js";
 
@@ -24,18 +24,28 @@ test("normal and Pomodoro inputs are validated immutably", () => {
   const snapshot = structuredClone(input);
   assert.deepEqual(validateTimerInput(input), {
     id: "reading", name: "Reading", emoji: "", color: "coral",
-    sectionId: "inbox", kind: "normal", config: { durationMs: 25 * MINUTE_MS },
+    dialColor: "coral", sectionId: "inbox", kind: "normal",
+    config: { durationMs: 25 * MINUTE_MS },
   });
   assert.deepEqual(input, snapshot);
-  assert.throws(() => validateTimerInput({ ...input, name: " " }), /name/i);
+  assert.throws(() => validateTimerInput({ ...input, name: " " }), /nombre/i);
   assert.throws(
-    () => validateTimerInput({ ...input, config: { durationMs: 0 } }), /duration/i,
+    () => validateTimerInput({ ...input, config: { durationMs: 0 } }), /duración/i,
   );
   const pomoInput = (hours, restMinutes) => ({
     ...input, kind: "pomodoro", config: { hours, restMinutes, autoAdvance: true },
   });
-  assert.throws(() => validateTimerInput(pomoInput(1.5, 15)), /whole positive/i);
-  assert.throws(() => validateTimerInput(pomoInput(2, 12)), /rest/i);
+  assert.throws(() => validateTimerInput(pomoInput(1.5, 15)), /entero positivo/i);
+  assert.throws(() => validateTimerInput(pomoInput(2, 12)), /descanso/i);
+  assert.equal(validateTimerInput({ ...input, color: "blue" }).dialColor, "blue");
+  assert.equal(
+    validateTimerInput({ ...input, color: "blue", dialColor: "amber" }).dialColor,
+    "amber",
+  );
+  assert.throws(
+    () => validateTimerInput({ ...input, dialColor: "invisible" }),
+    /color del dial/i,
+  );
 });
 
 test("all rest choices produce one focus/rest cycle per hour", () => {
@@ -64,17 +74,6 @@ test("start, pause, resume, and reset remain immutable", () => {
   assert.equal(resumed.runtime.deadlineEpochMs, NOW + 50 * MINUTE_MS);
   assert.deepEqual(reset.runtime, idle.runtime);
   assert.notEqual(running, idle);
-});
-
-test("startAll gives only idle timers one shared timestamp", () => {
-  const normal = (id, minutes) => createTimer({
-    id, name: id, kind: "normal", config: { durationMs: minutes * MINUTE_MS },
-  });
-  const alreadyRunning = transitionTimer(normal("c", 5), "start", NOW - MINUTE_MS);
-  const result = startAll([pomodoro({ id: "a" }), alreadyRunning, normal("b", 10)], NOW);
-  assert.equal(result[0].runtime.deadlineEpochMs, NOW + 45 * MINUTE_MS);
-  assert.equal(result[2].runtime.deadlineEpochMs, NOW + 10 * MINUTE_MS);
-  assert.strictEqual(result[1], alreadyRunning);
 });
 
 test("automatic progression restores across multiple deadlines and completes", () => {
@@ -113,7 +112,7 @@ test("manual progression waits at the first boundary until Continue", () => {
   assert.equal(continued.runtime.deadlineEpochMs, NOW + 105 * MINUTE_MS);
 });
 
-test("display stacks current-phase total minutes over zero-padded seconds", () => {
+test("display returns side-by-side ready zero-padded minutes and seconds", () => {
   const timer = transitionTimer(pomodoro(), "start", NOW);
   assert.deepEqual(getCurrentPhaseDisplay(timer, NOW), {
     minutes: "45", seconds: "00", remainingMs: 45 * MINUTE_MS, progress: 1,

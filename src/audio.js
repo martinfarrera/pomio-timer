@@ -2,19 +2,20 @@ const DEFAULTS = Object.freeze({
   noise: "off", noiseVolume: 0.35, alertVolume: 0.7,
   repeatUntilContinue: false,
 });
-const NOISES = new Set(["off", "rain", "static", "ocean"]);
+const NOISES = new Set(["off", "rain", "static", "ocean", "fan", "gamma"]);
 
 export function normalizeAudioSettings(value = {}) {
-  const volume = (candidate, fallback) =>
-    Number.isFinite(candidate) && candidate >= 0 && candidate <= 1
-      ? candidate
+  const candidate = value && typeof value === "object" ? value : {};
+  const volume = (value, fallback) =>
+    Number.isFinite(value) && value >= 0 && value <= 1
+      ? value
       : fallback;
   return {
-    noise: NOISES.has(value.noise) ? value.noise : DEFAULTS.noise,
-    noiseVolume: volume(value.noiseVolume, DEFAULTS.noiseVolume),
-    alertVolume: volume(value.alertVolume, DEFAULTS.alertVolume),
-    repeatUntilContinue: typeof value.repeatUntilContinue === "boolean"
-      ? value.repeatUntilContinue
+    noise: NOISES.has(candidate.noise) ? candidate.noise : DEFAULTS.noise,
+    noiseVolume: volume(candidate.noiseVolume, DEFAULTS.noiseVolume),
+    alertVolume: volume(candidate.alertVolume, DEFAULTS.alertVolume),
+    repeatUntilContinue: typeof candidate.repeatUntilContinue === "boolean"
+      ? candidate.repeatUntilContinue
       : DEFAULTS.repeatUntilContinue,
   };
 }
@@ -25,7 +26,7 @@ function browserContext() {
   return new Context();
 }
 
-function noiseSource(context, kind, volume, random) {
+function bufferedNoiseSource(context, kind, volume, random) {
   const length = Math.max(1, Math.floor(context.sampleRate * 2));
   const buffer = context.createBuffer(1, length, context.sampleRate);
   const samples = buffer.getChannelData(0);
@@ -38,6 +39,9 @@ function noiseSource(context, kind, volume, random) {
     } else if (kind === "ocean") {
       const wave = 0.2 + 0.8 * ((Math.sin(index / context.sampleRate * Math.PI) + 1) / 2);
       samples[index] = raw * wave;
+    } else if (kind === "fan") {
+      previous = previous * 0.94 + raw * 0.06;
+      samples[index] = previous;
     } else samples[index] = raw;
   }
   const source = context.createBufferSource();
@@ -46,13 +50,34 @@ function noiseSource(context, kind, volume, random) {
   source.buffer = buffer;
   source.loop = true;
   filter.type = kind === "static" ? "highpass" : "lowpass";
-  filter.frequency.value = kind === "static" ? 1_000 : kind === "rain" ? 1_600 : 420;
+  filter.frequency.value = kind === "static" ? 1_000
+    : kind === "rain" ? 1_600
+      : kind === "fan" ? 260
+        : 420;
   gain.gain.value = volume;
   source.connect(filter);
   filter.connect(gain);
   gain.connect(context.destination);
   source.start();
   return { source, gain };
+}
+
+function gammaSource(context, volume) {
+  const source = context.createOscillator();
+  const gain = context.createGain();
+  source.type = "sine";
+  source.frequency.value = 40;
+  gain.gain.value = volume;
+  source.connect(gain);
+  gain.connect(context.destination);
+  source.start();
+  return { source, gain };
+}
+
+function backgroundSource(context, kind, volume, random) {
+  return kind === "gamma"
+    ? gammaSource(context, volume)
+    : bufferedNoiseSource(context, kind, volume, random);
 }
 
 export function createAudioController(options = {}) {
@@ -65,15 +90,24 @@ export function createAudioController(options = {}) {
   let noise = null;
   let alertSchedule = null;
   let available = true;
+  let active = false;
 
   const stopNoise = () => {
     try { noise?.source.stop(); } catch { /* Already stopped. */ }
     noise = null;
   };
-  const startNoise = () => {
+  const syncNoise = ({ restart = false } = {}) => {
+    const shouldPlay = active && context?.state === "running" && settings.noise !== "off";
+    if (!shouldPlay) {
+      stopNoise();
+      return;
+    }
+    if (noise && !restart) {
+      noise.gain.gain.value = settings.noiseVolume;
+      return;
+    }
     stopNoise();
-    if (!context || context.state !== "running" || settings.noise === "off") return;
-    try { noise = noiseSource(context, settings.noise, settings.noiseVolume, random); }
+    try { noise = backgroundSource(context, settings.noise, settings.noiseVolume, random); }
     catch { available = false; }
   };
   const ringOnce = () => {
@@ -97,7 +131,7 @@ export function createAudioController(options = {}) {
         context ??= createContext();
         if (context.state === "suspended") await context.resume();
         available = context.state === "running";
-        if (available && !noise) startNoise();
+        syncNoise();
         return available;
       } catch {
         available = false;
@@ -107,8 +141,11 @@ export function createAudioController(options = {}) {
     setSettings(next) {
       const previousNoise = settings.noise;
       settings = normalizeAudioSettings({ ...settings, ...next });
-      if (noise && previousNoise === settings.noise) noise.gain.gain.value = settings.noiseVolume;
-      else if (context) startNoise();
+      syncNoise({ restart: previousNoise !== settings.noise });
+    },
+    setActive(nextActive) {
+      active = Boolean(nextActive);
+      syncNoise();
     },
     playPhaseBell({ repeat = settings.repeatUntilContinue } = {}) {
       controller.stopAlert();
@@ -133,7 +170,8 @@ export function createAudioController(options = {}) {
     getStatus() {
       return {
         available, unlocked: Boolean(context && context.state === "running"),
-        noise: settings.noise, repeating: alertSchedule !== null,
+        active, playing: Boolean(noise), noise: settings.noise,
+        repeating: alertSchedule !== null,
       };
     },
     destroy() {

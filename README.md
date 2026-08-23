@@ -1,62 +1,62 @@
-# Pomio Timer
+# Temporizador Pomio
 
-Pomio Timer is a dependency-free web app for normal timers and hourly Pomodoro routines. It is designed for split-screen use down to a 150 × 300 CSS-pixel viewport and can be uploaded directly to static hosting.
+Temporizador Pomio es una aplicación web sin dependencias para temporizadores normales y rutinas Pomodoro por horas. Está diseñada para funcionar en pantalla dividida desde un área visible de 150 × 300 píxeles CSS y puede subirse directamente a un alojamiento estático.
 
-## Use
+## Uso
 
-1. Open **Timer** and choose a normal or Pomodoro timer.
-2. Give it a name, emoji, section, and color.
-3. Use **Start**, **Pause**, **Reset**, or **Settings** on each card. **Start all** starts every idle timer with one shared timestamp.
-4. Create sections to organize routines; deleting a section moves its timers to **Timers**.
+1. Abre **Temporizador** para crear uno nuevo.
+2. Escribe un nombre, agrega un emoji opcional y elige el color de la tarjeta y del dial.
+3. Selecciona **Horas y minutos** para un temporizador normal o **Horas completas con descanso** para un Pomodoro.
+4. Usa **Iniciar**, **Pausar**, **Reiniciar** o **Configurar** en cada tarjeta.
 
-Pomodoros accept whole hours. Each hour contains one focus phase and one 5, 10, 15, or 20-minute rest. For example, three hours with a 15-minute rest produces three 45/15 cycles. Enable automatic continuation or pause at every phase boundary.
+Los Pomodoros aceptan horas completas. Cada hora contiene una fase de enfoque y un descanso de 5, 10, 15 o 20 minutos. Por ejemplo, tres horas con 15 minutos de descanso producen tres ciclos de 45/15. Puedes activar la continuación automática o esperar en cada cambio de fase.
 
-## Sounds
+## Sonidos
 
-Open **Sounds** to choose heavy rain, TV static, ocean waves, or silence and set background and alert volumes. Audio is generated with Web Audio; there are no downloaded sound files.
+Abre **Sonidos** para elegir lluvia intensa, ruido blanco, olas del mar, ventilador, una onda gamma de 40 Hz o silencio. También puedes ajustar por separado el volumen de fondo y el de las alertas. Todo el audio se genera con Web Audio; no se descargan archivos de sonido.
 
-Browsers require a user gesture before audio can begin. If **Ring until Continue** is enabled, a phase waits while the bell repeats. Press **Continue** to stop the bell and start the prepared phase. Timing and visual controls remain usable when audio is unavailable or suspended.
+El sonido de fondo se reproduce únicamente mientras haya al menos un temporizador en ejecución. Los navegadores exigen una interacción del usuario antes de iniciar audio. Si **Repetir hasta continuar** está activado, el cambio de fase espera mientras se repite la alerta. Pulsa **Continuar** para detenerla e iniciar la fase preparada. Los temporizadores y controles visuales siguen funcionando si el audio no está disponible o está suspendido.
 
-## Persistence limits
+## Límites de persistencia
 
-Timers, sections, settings, phases, and deadlines are stored as versioned JSON in `localStorage`. Running timers reconcile from their deadlines after sleep, reload, or a computer restart.
+Los temporizadores, ajustes, fases y plazos se guardan como JSON versionado en `localStorage`. Los temporizadores en ejecución se recuperan desde sus plazos después de una suspensión, recarga o reinicio del equipo.
 
-Data persists only in the same browser profile on the same device. Clearing site data, using private browsing, changing browsers, or changing the site origin can remove or isolate it. There is no account, cloud sync, database, or cross-device backup.
+Los datos persisten solo en el mismo perfil del navegador y dispositivo. Borrar los datos del sitio, usar navegación privada, cambiar de navegador o cambiar el origen del sitio puede eliminarlos o aislarlos. No hay cuenta, sincronización en la nube, base de datos ni respaldo entre dispositivos.
 
-## Accessibility
+## Accesibilidad
 
-- Semantic buttons, headings, forms, dialogs, labels, and live announcements.
-- Keyboard-visible focus and an early skip link.
-- Accessible labels for icon-only timer controls.
-- Reduced-motion support.
-- Responsive stacking without horizontal page overflow at the minimum viewport.
+- Botones, encabezados, formularios, diálogos, etiquetas y anuncios semánticos.
+- Foco visible por teclado y enlace inicial para saltar al contenido.
+- Etiquetas accesibles en los controles que muestran solo iconos.
+- Compatibilidad con movimiento reducido.
+- Diseño adaptable sin desplazamiento horizontal en el tamaño mínimo.
 
-## Local checks
+## Comprobaciones locales
 
 ```sh
 npm test
 python3 -m http.server 4173
 ```
 
-Open `http://localhost:4173` and use responsive mode at 150 × 300.
+Abre `http://localhost:4173` y usa el modo adaptable a 150 × 300.
 
-### Browser smoke matrix
+### Matriz de prueba rápida en navegadores
 
-| Browser | Minimum checks |
+| Navegador | Comprobaciones mínimas |
 |---|---|
-| Chromium | 150×300 layout, timer CRUD, reload catch-up, sound unlock |
-| Firefox | Dialog keyboard flow, concurrent timers, localStorage recovery |
-| Safari | Split view, visibility recovery, generated noise and bell |
+| Chromium | Diseño a 150×300, altas/cambios/bajas de temporizadores, recuperación tras recarga y desbloqueo de sonido |
+| Firefox | Flujo de teclado en diálogos, temporizadores simultáneos y recuperación de `localStorage` |
+| Safari | Vista dividida, recuperación de visibilidad, sonidos generados y alerta |
 
-For every browser, confirm there is no horizontal overflow; header and timer controls remain reachable; focus/rest colors change; minutes appear above seconds; and Ring until Continue blocks progression.
+En cada navegador, confirma que no haya desplazamiento horizontal; que el encabezado y los controles sigan accesibles; que solo el descanso cambie la tarjeta a verde; que minutos y segundos aparezcan uno junto al otro; y que **Repetir hasta continuar** detenga el avance.
 
-## Deploy to Hostinger
+## Despliegue en Hostinger
 
-No build step is required.
+No se necesita un paso de compilación.
 
-1. Open Hostinger File Manager for the target domain.
-2. Open `public_html` and remove or archive the previous site only if you intend to replace it.
-3. Upload `index.html`, `styles/`, `src/`, `package.json`, and this README while preserving their paths.
-4. Visit the HTTPS domain and run the smoke checks above.
+1. Abre el administrador de archivos de Hostinger para el dominio.
+2. Abre `public_html` y elimina o archiva el sitio anterior solo si deseas reemplazarlo.
+3. Sube `index.html`, `styles/`, `src/`, `package.json` y este README conservando sus rutas.
+4. Visita el dominio HTTPS y ejecuta las comprobaciones anteriores.
 
-The production web server must serve `.js` files with a JavaScript MIME type. To roll back, restore the prior static directory; Pomio Timer has no server migration.
+El servidor web de producción debe entregar los archivos `.js` con un tipo MIME de JavaScript. Para revertir el despliegue, restaura el directorio estático anterior; Temporizador Pomio no tiene migraciones de servidor.

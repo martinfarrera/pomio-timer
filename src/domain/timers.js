@@ -5,6 +5,18 @@ export const TIMER_COLORS = Object.freeze([
   "coral", "amber", "yellow", "mint", "green",
   "teal", "sky", "blue", "lavender", "rose",
 ]);
+export const TIMER_COLOR_VALUES = Object.freeze({
+  coral: "#b95747",
+  amber: "#9a5f18",
+  yellow: "#7e6a12",
+  mint: "#37785a",
+  green: "#36724a",
+  teal: "#28746e",
+  sky: "#337497",
+  blue: "#3468aa",
+  lavender: "#6c58a3",
+  rose: "#9f4f69",
+});
 
 const STATUSES = new Set([
   "idle", "running", "paused", "awaitingContinue", "completed",
@@ -12,7 +24,7 @@ const STATUSES = new Set([
 
 function assertObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new TypeError(`${label} must be an object`);
+    throw new TypeError(`${label} debe ser un objeto`);
   }
 }
 
@@ -27,10 +39,10 @@ function makeId() {
 
 export function getPomodoroDurations(hours, restMinutes) {
   if (!Number.isInteger(hours) || hours <= 0) {
-    throw new RangeError("Pomodoro duration must be a whole positive number of hours");
+    throw new RangeError("La duración Pomodoro debe ser un número entero positivo de horas");
   }
   if (!REST_MINUTES.includes(restMinutes)) {
-    throw new RangeError("Rest must be 5, 10, 15, or 20 minutes");
+    throw new RangeError("El descanso debe ser de 5, 10, 15 o 20 minutos");
   }
   return {
     cycles: hours,
@@ -40,19 +52,19 @@ export function getPomodoroDurations(hours, restMinutes) {
 }
 
 export function validateTimerInput(input) {
-  assertObject(input, "Timer");
-  assertObject(input.config, "Timer config");
+  assertObject(input, "El temporizador");
+  assertObject(input.config, "La configuración del temporizador");
   const name = cleanText(input.name);
-  if (!name) throw new RangeError("Timer name is required");
+  if (!name) throw new RangeError("El nombre del temporizador es obligatorio");
   if (input.kind !== "normal" && input.kind !== "pomodoro") {
-    throw new RangeError("Timer kind must be normal or pomodoro");
+    throw new RangeError("El tipo debe ser normal o Pomodoro");
   }
 
   let config;
   if (input.kind === "normal") {
     const { durationMs } = input.config;
     if (!Number.isInteger(durationMs) || durationMs <= 0) {
-      throw new RangeError("Normal timer duration must be a positive integer");
+      throw new RangeError("La duración del temporizador debe ser mayor que cero");
     }
     config = { durationMs };
   } else {
@@ -63,13 +75,18 @@ export function validateTimerInput(input) {
 
   const color = cleanText(input.color, "coral") || "coral";
   if (!TIMER_COLORS.includes(color)) {
-    throw new RangeError(`Timer color must be one of: ${TIMER_COLORS.join(", ")}`);
+    throw new RangeError(`El color del temporizador debe ser uno de: ${TIMER_COLORS.join(", ")}`);
+  }
+  const dialColor = cleanText(input.dialColor, color) || color;
+  if (!TIMER_COLORS.includes(dialColor)) {
+    throw new RangeError(`El color del dial debe ser uno de: ${TIMER_COLORS.join(", ")}`);
   }
   return {
     id: cleanText(input.id) || makeId(),
     name,
     emoji: cleanText(input.emoji),
     color,
+    dialColor,
     sectionId: cleanText(input.sectionId, "inbox") || "inbox",
     kind: input.kind,
     config,
@@ -100,10 +117,10 @@ export function createTimer(input) {
 }
 
 function assertRuntime(timer) {
-  assertObject(timer, "Timer");
-  assertObject(timer.runtime, "Timer runtime");
+  assertObject(timer, "El temporizador");
+  assertObject(timer.runtime, "El estado del temporizador");
   if (!STATUSES.has(timer.runtime.status)) {
-    throw new RangeError(`Unknown timer status: ${timer.runtime.status}`);
+    throw new RangeError(`Estado desconocido del temporizador: ${timer.runtime.status}`);
   }
 }
 
@@ -140,7 +157,7 @@ function crossBoundary(timer, atEpochMs, forceWait) {
 
 export function reconcileTimer(timer, now = Date.now(), { forceWait = false } = {}) {
   assertRuntime(timer);
-  if (!Number.isFinite(now)) throw new TypeError("now must be a finite timestamp");
+  if (!Number.isFinite(now)) throw new TypeError("La fecha debe ser una marca de tiempo válida");
   if (timer.runtime.status !== "running") return { timer, transitions: [] };
 
   let current = timer;
@@ -165,7 +182,7 @@ export function reconcileTimer(timer, now = Date.now(), { forceWait = false } = 
 
 export function transitionTimer(timer, action, now = Date.now()) {
   assertRuntime(timer);
-  if (!Number.isFinite(now)) throw new TypeError("now must be a finite timestamp");
+  if (!Number.isFinite(now)) throw new TypeError("La fecha debe ser una marca de tiempo válida");
   if (action === "reset") return { ...timer, runtime: initialRuntime(timer) };
 
   if (action === "pause") {
@@ -196,14 +213,7 @@ export function transitionTimer(timer, action, now = Date.now()) {
     };
   }
   if (action === "start" || action === "continue") return timer;
-  throw new RangeError(`Unknown timer action: ${action}`);
-}
-
-export function startAll(timers, now = Date.now()) {
-  if (!Array.isArray(timers)) throw new TypeError("timers must be an array");
-  return timers.map((timer) =>
-    timer.runtime.status === "idle" ? transitionTimer(timer, "start", now) : timer,
-  );
+  throw new RangeError(`Acción desconocida del temporizador: ${action}`);
 }
 
 export function getCurrentPhaseDisplay(timer, now = Date.now()) {

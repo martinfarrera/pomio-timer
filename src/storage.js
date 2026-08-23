@@ -1,16 +1,10 @@
 import { createTimer, validateTimerInput } from "./domain/timers.js";
+import { normalizeAudioSettings } from "./audio.js";
 
 export const STORAGE_VERSION = 1;
 export const STORAGE_KEY = "pomio-timer-state";
 
-const DEFAULT_SECTION = Object.freeze({ id: "inbox", name: "Timers" });
-const DEFAULT_AUDIO = Object.freeze({
-  noise: "off",
-  noiseVolume: 0.35,
-  alertVolume: 0.7,
-  repeatUntilContinue: false,
-});
-const NOISES = new Set(["off", "rain", "static", "ocean"]);
+const DEFAULT_SECTION = Object.freeze({ id: "inbox", name: "Temporizadores" });
 const STATUSES = new Set([
   "idle", "running", "paused", "awaitingContinue", "completed",
 ]);
@@ -20,7 +14,7 @@ export function createDefaultState() {
     version: STORAGE_VERSION,
     sections: [{ ...DEFAULT_SECTION }],
     timers: [],
-    audio: { ...DEFAULT_AUDIO },
+    audio: normalizeAudioSettings(),
   };
 }
 
@@ -41,22 +35,6 @@ function normalizeSections(value) {
   }
   if (!seen.has(DEFAULT_SECTION.id)) sections.unshift({ ...DEFAULT_SECTION });
   return sections;
-}
-
-function normalizeAudio(value) {
-  const volume = (candidate, fallback) =>
-    Number.isFinite(candidate) && candidate >= 0 && candidate <= 1
-      ? candidate
-      : fallback;
-  return {
-    noise: NOISES.has(value?.noise) ? value.noise : DEFAULT_AUDIO.noise,
-    noiseVolume: volume(value?.noiseVolume, DEFAULT_AUDIO.noiseVolume),
-    alertVolume: volume(value?.alertVolume, DEFAULT_AUDIO.alertVolume),
-    repeatUntilContinue:
-      typeof value?.repeatUntilContinue === "boolean"
-        ? value.repeatUntilContinue
-        : DEFAULT_AUDIO.repeatUntilContinue,
-  };
 }
 
 function normalizeRuntime(value, timer) {
@@ -117,7 +95,7 @@ export function normalizeState(value) {
     version: STORAGE_VERSION,
     sections,
     timers: normalizeTimers(value.timers, sectionIds),
-    audio: normalizeAudio(value.audio),
+    audio: normalizeAudioSettings(value.audio),
   };
 }
 

@@ -33,7 +33,7 @@ test("defaults are versioned, complete, and returned without shared references",
   const second = createDefaultState();
   assert.deepEqual(first, {
     version: 1,
-    sections: [{ id: "inbox", name: "Timers" }],
+    sections: [{ id: "inbox", name: "Temporizadores" }],
     timers: [],
     audio: {
       noise: "off", noiseVolume: 0.35, alertVolume: 0.7,
@@ -41,7 +41,7 @@ test("defaults are versioned, complete, and returned without shared references",
     },
   });
   first.sections[0].name = "Changed";
-  assert.equal(second.sections[0].name, "Timers");
+  assert.equal(second.sections[0].name, "Temporizadores");
 });
 
 test("save/load round-trip preserves sections, settings, phases, and deadlines", () => {
@@ -76,7 +76,7 @@ test("normalization removes invalid entries and repairs missing section links", 
     audio: { noise: "invalid", noiseVolume: 4, alertVolume: 0.4 },
   });
   assert.deepEqual(normalized.sections, [
-    { id: "inbox", name: "Timers" }, { id: "work", name: "Work" },
+    { id: "inbox", name: "Temporizadores" }, { id: "work", name: "Work" },
   ]);
   assert.equal(normalized.timers.length, 1);
   assert.equal(normalized.timers[0].sectionId, "inbox");
@@ -86,6 +86,22 @@ test("normalization removes invalid entries and repairs missing section links", 
     noise: "off", noiseVolume: 0.35, alertVolume: 0.4,
     repeatUntilContinue: false,
   });
+});
+
+test("version 1 timers gain dialColor from their legacy card color", () => {
+  const legacy = runningPomodoro();
+  delete legacy.dialColor;
+  const normalized = normalizeState({
+    version: 1,
+    sections: [{ id: "inbox", name: "Timers" }, { id: "work", name: "Work" }],
+    timers: [legacy],
+    audio: { noise: "fan", noiseVolume: 0.45, alertVolume: 0.6 },
+  });
+  assert.equal(normalized.version, 1);
+  assert.equal(normalized.timers[0].color, "rose");
+  assert.equal(normalized.timers[0].dialColor, "rose");
+  assert.equal(normalized.timers[0].sectionId, "work");
+  assert.equal(normalized.audio.noise, "fan");
 });
 
 test("corrupt, unsupported, unavailable, and missing storage recover to defaults", () => {
